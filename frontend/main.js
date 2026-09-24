@@ -10,6 +10,7 @@ let isConnected = false;
 let isRecording = false;
 let isSpeaking = false;
 let isMuted = false;
+let isUserMicMuted = false;
 let messageCount = 0;
 
 const BARGE_RMS_THRESHOLD = 0.025; // Client-side instant barge-in
@@ -27,13 +28,11 @@ let activeAudioSources = [];
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 const latencyText = document.getElementById('latency-text');
-const orbRing = document.getElementById('orb-ring');
-const orbCore = document.getElementById('orb-core');
 const voiceStatePill = document.getElementById('voice-state-pill');
 const voiceStateLabel = document.getElementById('voice-state-label');
 const micToggleBtn = document.getElementById('mic-toggle-btn');
 const muteBtn = document.getElementById('mute-btn');
-const hangupBtn = document.getElementById('hangup-btn');
+const userMicBtn = document.getElementById('user-mic-btn');
 const clearChatBtn = document.getElementById('clear-chat-btn');
 const transcriptContainer = document.getElementById('transcript-container');
 const visualContainer = document.getElementById('visual-container');
@@ -52,7 +51,7 @@ function drawWaveform() {
     const height = waveformCanvas.height;
     canvasCtx.clearRect(0, 0, width, height);
 
-    if (!analyser || !isRecording) {
+    if (!analyser || !isRecording || isUserMicMuted) {
         canvasCtx.beginPath();
         canvasCtx.strokeStyle = '#e2e8f0';
         canvasCtx.lineWidth = 2;
@@ -105,14 +104,32 @@ micToggleBtn.addEventListener('click', async () => {
     }
 });
 
-hangupBtn.addEventListener('click', () => {
-    if (isConnected) stopSession();
+userMicBtn.addEventListener('click', () => {
+    isUserMicMuted = !isUserMicMuted;
+    userMicBtn.classList.toggle('text-red-500', isUserMicMuted);
+    userMicBtn.title = isUserMicMuted ? "Unmute Microphone" : "Mute Microphone";
+    userMicBtn.innerHTML = `<i id="user-mic-icon" data-lucide="${isUserMicMuted ? 'mic-off' : 'mic'}" class="w-5 h-5"></i>`;
+    lucide.createIcons();
 });
 
 muteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     muteBtn.classList.toggle('text-red-500', isMuted);
     muteBtn.title = isMuted ? "Unmute Athena Voice" : "Mute Athena Voice";
+    
+    if (isMuted) {
+        // Instantly stop currently playing scheduled audio
+        for (const source of activeAudioSources) {
+            try { source.stop(); } catch (e) {}
+        }
+        activeAudioSources = [];
+        nextPlayTime = audioCtx ? audioCtx.currentTime : 0;
+        isSpeaking = false;
+        // Don't clear bubbles so text can continue!
+        if (isRecording) {
+            setVoiceState('listening', 'Athena is Listening...');
+        }
+    }
 });
 
 clearChatBtn.addEventListener('click', () => {
@@ -199,7 +216,9 @@ async function initAudio() {
         workletNode.port.onmessage = (event) => {
             const { pcm, rms } = event.data;
             if (socket && socket.readyState === WebSocket.OPEN && pcm) {
-                socket.send(pcm); // Stream 16kHz PCM bytes to server immediately
+                if (!isUserMicMuted) {
+                    socket.send(pcm); // Stream 16kHz PCM bytes to server immediately
+                }
             }
             // Client-side Instant Barge-in disabled to prevent stuttering on noise
             // Server-side VAD handles interruptions correctly.
@@ -468,15 +487,12 @@ function updateStatus(state, label) {
 
 function setVoiceState(state, label) {
     if (state === 'speaking') {
-        orbRing.className = 'w-64 h-64 rounded-full border-[1px] border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center orb-speaking transition-all duration-300 shadow-orb relative';
         voiceStatePill.className = 'mt-8 px-5 py-2 rounded-sm bg-primary/20 shadow-[0_0_15px_rgba(163,255,0,0.3)] border border-primary/50 text-xs font-bold text-primary flex items-center gap-2 uppercase tracking-widest tech-border';
         voiceStateLabel.textContent = label;
     } else if (state === 'listening') {
-        orbRing.className = 'w-64 h-64 rounded-full border-[1px] border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center transition-all duration-300 shadow-orb relative';
         voiceStatePill.className = 'mt-8 px-5 py-2 rounded-sm bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] border border-white/30 text-xs font-bold text-white flex items-center gap-2 uppercase tracking-widest tech-border';
         voiceStateLabel.textContent = label;
     } else {
-        orbRing.className = 'w-64 h-64 rounded-full border-[1px] border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center transition-all duration-300 shadow-orb relative';
         voiceStatePill.className = 'mt-8 px-5 py-2 rounded-sm bg-white/5 border border-white/10 text-xs font-medium text-white/60 flex items-center gap-2 uppercase tracking-widest tech-border';
         voiceStateLabel.textContent = label;
     }
