@@ -397,6 +397,15 @@ function renderToolVisual(action, data) {
             `;
         }
 
+        let imageHtml = '';
+        if (data.image_url) {
+            imageHtml = `
+                <div class="mt-3 rounded-lg overflow-hidden border border-white/10">
+                    <img src="${data.image_url}" alt="${data.title}" class="w-full h-auto object-cover" />
+                </div>
+            `;
+        }
+
         let keyPointsHtml = '';
         if (data.key_points && data.key_points.length > 0) {
             keyPointsHtml = `
@@ -413,6 +422,7 @@ function renderToolVisual(action, data) {
             </div>
             <h4 class="font-bold text-white text-sm">${data.title}</h4>
             <p class="text-xs text-white/60">${data.caption}</p>
+            ${imageHtml}
             ${diagramHtml}
             ${keyPointsHtml}
         `;

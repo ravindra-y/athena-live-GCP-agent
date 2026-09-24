@@ -70,7 +70,7 @@ async def display_visual(
     image_url = ""
     if image_keywords:
         safe_query = urllib.parse.quote(image_keywords)
-        image_url = f"https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80"
+        image_url = f"https://image.pollinations.ai/prompt/{safe_query}?width=800&height=500&nologo=true"
 
     return {
         "status": "displayed",
