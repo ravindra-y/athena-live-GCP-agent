@@ -13,7 +13,7 @@ from .persona import ATHENA_INSTRUCTION
 from .tools import gcp_assistant, learning_assistant, display_visual, send_resource_link
 
 VOICE_NAME = os.getenv("LIVE_VOICE", "Aoede")
-MODEL_NAME = os.getenv("LIVE_MODEL", "gemini-2.0-flash-exp")
+MODEL_NAME = os.getenv("LIVE_MODEL", "gemini-3.8-live")
 
 root_agent = Agent(
     model=Gemini(
