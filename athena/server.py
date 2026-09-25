@@ -1,9 +1,11 @@
 """Athena Live Voice Server with Google ADK."""
+
 import asyncio
 import json
 import logging
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -11,11 +13,11 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from google.genai import types
-from google.adk.runners import Runner, RunConfig
-from google.adk.agents.run_config import StreamingMode
 from google.adk.agents import LiveRequestQueue
+from google.adk.agents.run_config import StreamingMode
+from google.adk.runners import RunConfig, Runner
 from google.adk.sessions import InMemorySessionService
+from google.genai import types
 
 from .agent import root_agent
 from .tools import to_frontend_action
@@ -42,7 +44,9 @@ RUN_CONFIG = RunConfig(
 )
 
 app = FastAPI(title="Athena Voice Assistant")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
 
 FRONTEND = Path(__file__).resolve().parents[1] / "frontend"
 
@@ -51,8 +55,10 @@ FRONTEND = Path(__file__).resolve().parents[1] / "frontend"
 async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
     log.info("WebSocket connected. Starting live session for Athena.")
-    
-    session = await session_service.create_session(app_name=APP_NAME, user_id="user_listener")
+
+    session = await session_service.create_session(
+        app_name=APP_NAME, user_id="user_listener"
+    )
     live_request_queue = LiveRequestQueue()
 
     async def upstream():
@@ -62,7 +68,7 @@ async def ws_endpoint(websocket: WebSocket):
             if msg.get("type") == "websocket.disconnect":
                 log.info("Client disconnected.")
                 return
-            
+
             raw_bytes = msg.get("bytes")
             if raw_bytes:
                 live_request_queue.send_realtime(
@@ -74,12 +80,16 @@ async def ws_endpoint(websocket: WebSocket):
         # 1. User spoken transcript
         it = getattr(event, "input_transcription", None)
         if it and getattr(it, "text", None):
-            await websocket.send_text(json.dumps({"type": "transcript", "role": "user", "text": it.text}))
+            await websocket.send_text(
+                json.dumps({"type": "transcript", "role": "user", "text": it.text})
+            )
 
         # 2. Athena spoken transcript
         ot = getattr(event, "output_transcription", None)
         if ot and getattr(ot, "text", None):
-            await websocket.send_text(json.dumps({"type": "transcript", "role": "athena", "text": ot.text}))
+            await websocket.send_text(
+                json.dumps({"type": "transcript", "role": "athena", "text": ot.text})
+            )
 
         # 3. Audio bytes & tool calls
         content = getattr(event, "content", None)
@@ -93,9 +103,13 @@ async def ws_endpoint(websocket: WebSocket):
                 # Tool executions -> Frontend Visual Cards / Links
                 fc = getattr(part, "function_call", None)
                 if fc:
-                    action_cmd = to_frontend_action(fc.name, dict(getattr(fc, "args", None) or {}))
+                    action_cmd = to_frontend_action(
+                        fc.name, dict(getattr(fc, "args", None) or {})
+                    )
                     if action_cmd:
-                        await websocket.send_text(json.dumps({"type": "tool_action", **action_cmd}))
+                        await websocket.send_text(
+                            json.dumps({"type": "tool_action", **action_cmd})
+                        )
 
         # 4. Interruption (User barged in while Athena was speaking)
         if getattr(event, "interrupted", None):
@@ -115,15 +129,19 @@ async def ws_endpoint(websocket: WebSocket):
     down_task = asyncio.create_task(downstream(), name="downstream")
 
     try:
-        done, pending = await asyncio.wait({up_task, down_task}, return_when=asyncio.FIRST_COMPLETED)
+        done, pending = await asyncio.wait(
+            {up_task, down_task}, return_when=asyncio.FIRST_COMPLETED
+        )
         live_request_queue.close()
         for t in done:
             exc = t.exception()
             if exc:
                 log.exception("%s failed: %r", t.get_name(), exc)
                 try:
-                    await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
-                except Exception:
+                    await websocket.send_text(
+                        json.dumps({"type": "error", "message": str(exc)})
+                    )
+                except Exception:  # noqa: BLE001, S110
                     pass
         for t in pending:
             t.cancel()

@@ -1,12 +1,10 @@
 """Tools available to Athena."""
-from typing import Optional, List
+
 import urllib.parse
 
 
 async def gcp_assistant(
-    query: str,
-    category: str = "general",
-    service_name: Optional[str] = None
+    query: str, category: str = "general", service_name: str | None = None
 ) -> dict:
     """Query Google Cloud Platform (GCP) real-time information, documentation, service status, pricing, or troubleshooting.
 
@@ -20,7 +18,7 @@ async def gcp_assistant(
         "service": service_name or "GCP General",
         "category": category,
         "summary": f"Retrieved relevant GCP details for: {query}",
-        "details": "Documentation reference and best practices available."
+        "details": "Documentation reference and best practices available.",
     }
 
 
@@ -28,7 +26,7 @@ async def learning_assistant(
     topic: str,
     action: str = "explain",
     difficulty: str = "intermediate",
-    user_answer: Optional[str] = None
+    user_answer: str | None = None,
 ) -> dict:
     """Facilitate interactive learning, quizzes, Socratic questions, and concept breakdowns.
 
@@ -43,7 +41,7 @@ async def learning_assistant(
         "topic": topic,
         "action": action,
         "difficulty": difficulty,
-        "result": f"Learning session ready for {topic} ({action})."
+        "result": f"Learning session ready for {topic} ({action}).",
     }
 
 
@@ -51,9 +49,9 @@ async def display_visual(
     title: str,
     caption: str,
     visual_type: str = "diagram",
-    image_keywords: Optional[str] = None,
-    diagram_definition: Optional[str] = None,
-    key_points: Optional[List[str]] = None
+    image_keywords: str | None = None,
+    diagram_definition: str | None = None,
+    key_points: list[str] | None = None,
 ) -> dict:
     """Display pictorial information, diagrams, architecture charts, or illustrative images on the user's screen.
 
@@ -79,15 +77,12 @@ async def display_visual(
         "visual_type": visual_type,
         "image_url": image_url,
         "diagram": diagram_definition or "",
-        "key_points": key_points or []
+        "key_points": key_points or [],
     }
 
 
 async def send_resource_link(
-    title: str,
-    url: str,
-    description: str = "",
-    resource_type: str = "documentation"
+    title: str, url: str, description: str = "", resource_type: str = "documentation"
 ) -> dict:
     """Send a clickable reference link, documentation URL, or whitepaper to the user's chat screen.
 
@@ -102,7 +97,7 @@ async def send_resource_link(
         "title": title,
         "url": url,
         "description": description,
-        "resource_type": resource_type
+        "resource_type": resource_type,
     }
 
 
